@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Anoro Takip Asistanı</title>
+    <meta name="description" content="KOAH hastaları için Anoro ilaç takip uygulaması">
+    <meta name="theme-color" content="#2563eb">
+    
+    <link rel="apple-touch-icon" href="https://via.placeholder.com/192/2563eb/ffffff?text=Anoro">
+    <link rel="icon" type="image/png" href="https://via.placeholder.com/192/2563eb/ffffff?text=Anoro">
+
+    <style>
+        /* --- CSS: TASARIM VE GÖRÜNÜM --- */
+        :root {
+            --primary-color: #2563eb; /* Medikal Mavi */
+            --danger-color: #dc2626;  /* Uyarı Kırmızı */
+            --success-color: #16a34a; /* Onay Yeşil */
+            --bg-color: #f3f4f6;
+            --card-bg: #ffffff;
+            --text-color: #1f2937;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden; /* Kaydırmayı engelle, uygulama hissi ver */
+        }
+
+        /* Üst Başlık */
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /* Ana İçerik Alanı */
+        main {
+            flex: 1;
+            overflow-y: auto; /* Sadece içerik kaysın */
+            padding: 20px;
+            padding-bottom: 80px; /* Navigasyon için boşluk */
+        }
+
+        /* Sayfa Geçişleri (SPA Mantığı) */
+        .page {
+            display: none; /* Varsayılan olarak gizli */
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        .page.active {
+            display: block; /* Sadece aktif sayfa görünür */
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* BİLEŞENLER */
+        .card {
+            background: var(--card-bg);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+
+        /* Koca Buton */
+        .big-btn {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 200px;
+            height: 200px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 10px 25px rgba(37, 99, 235, 0.4);
+            transition: transform 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+        }
+
+        .big-btn:active {
+            transform: scale(0.95);
+        }
+
+        .big-btn span {
+            display: block;
+            margin-top: 5px;
+            font-size: 0.9rem;
+            opacity: 0.9;
+            font-weight: normal;
+        }
+
+        /* İstatistik Kartları */
+        .stat-box {
+            font-size: 3rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin: 10px 0;
+        }
+        
+        .stat-label {
+            font-size: 1rem;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .warning {
+            color: var(--danger-color);
+        }
+
+        /* Liste Stilleri */
+        .history-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .history-item {
+            background: white;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .history-time {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .history-date {
+            font-size: 0.9rem;
+            color: #6b7280;
+        }
+
+        /* Form Elemanları */
+        .form-group {
+            margin-bottom: 15px;
+            text-align: left;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .save-btn {
+            background-color: var(--success-color);
+            color: white;
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        /* Alt Navigasyon Çubuğu */
+        nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: white;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            z-index: 100;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #6b7280;
+            text-decoration: none;
+            font-size: 0.8rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            width: 33%;
+        }
+
+        .nav-item.active {
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+
+        .nav-icon {
+            font-size: 1.5rem;
+            margin-bottom: 2px;
+        }
+
+        /* Modal (Uyarılar için) */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            width: 80%;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <header id="app-header">Anoro Takip</header>
+
+    <main>
+        <div id="home-page" class="page active">
+            <div class="card">
+                <div class="stat-label">Kalan İlaç Hakkı</div>
+                <div id="stock-display" class="stat-box">30</div>
+                <div id="stock-warning" style="display:none; color: red; font-weight: bold;">⚠️ İlacınız bitmek üzere!</div>
+            </div>
+
+            <button onclick="takeDose()" class="big-btn">
+                İLACI ALDIM
+                <span id="next-dose-time">Bir sonraki: Yarın</span>
+            </button>
+
+            <div class="card" style="margin-top: 20px;">
+                <div class="stat-label">Son Kullanım</div>
+                <div id="last-taken-display" style="font-size: 1.2rem; font-weight: 500; margin-top: 5px;">-</div>
+            </div>
+        </div>
+
+        <div id="history-page" class="page">
+            <h3>Son Kullanım Geçmişi</h3>
+            <ul id="history-list" class="history-list">
+                </ul>
+        </div>
+
+        <div id="settings-page" class="page">
+            <h3>Ayarlar</h3>
+            <div class="card">
+                <div class="form-group">
+                    <label>Kalan Doz Sayısı (Düzeltme)</label>
+                    <input type="number" id="setting-stock" value="30">
+                </div>
+                <div class="form-group">
+                    <label>Hatırlatma Saati</label>
+                    <input type="time" id="setting-time" value="09:00">
+                </div>
+                <button onclick="saveSettings()" class="save-btn">Kaydet</button>
+                <br><br>
+                <button onclick="resetApp()" style="background:#dc2626; color:white; border:none; padding:10px; border-radius:5px; width:100%;">Tüm Verileri Sıfırla</button>
+            </div>
+        </div>
+    </main>
+
+    <nav>
+        <button class="nav-item active" onclick="showPage('home-page', this)">
+            <span class="nav-icon">🏠</span>
+            <span>Ana Sayfa</span>
+        </button>
+        <button class="nav-item" onclick="showPage('history-page', this)">
+            <span class="nav-icon">📅</span>
+            <span>Geçmiş</span>
+        </button>
+        <button class="nav-item" onclick="showPage('settings-page', this)">
+            <span class="nav-icon">⚙️</span>
+            <span>Ayarlar</span>
+        </button>
+    </nav>
+
+    <div id="alert-modal" class="modal">
+        <div class="modal-content">
+            <h3 id="modal-title">Uyarı</h3>
+            <p id="modal-msg">Mesaj</p>
+            <button onclick="closeModal()" class="save-btn">Tamam</button>
+        </div>
+    </div>
+
+    <script>
+        /* --- JAVASCRIPT: MANTIK VE VERİ YÖNETİMİ --- */
+
+        // 1. VERİ YAPISI VE BAŞLANGIÇ
+        const DEFAULT_DATA = {
+            stock: 30,
+            reminderTime: "09:00",
+            history: [],
+            lastTaken: null
+        };
+
+        let appData = JSON.parse(localStorage.getItem('anoroData')) || DEFAULT_DATA;
+
+        // Uygulama açılınca çalışacaklar
+        document.addEventListener('DOMContentLoaded', () => {
+            updateUI();
+            checkNotifications();
+            
+            // Ayarlar sayfasındaki inputları doldur
+            document.getElementById('setting-stock').value = appData.stock;
+            document.getElementById('setting-time').value = appData.reminderTime;
+        });
+
+        // 2. TEMEL FONKSİYONLAR
+        
+        function takeDose() {
+            // Stok kontrolü
+            if (appData.stock <= 0) {
+                showAlert("Uyarı", "İlaç sayacı zaten 0. Lütfen yeni kutuya geçin ve ayarlardan stoku güncelleyin.");
+                return;
+            }
+
+            // Çift tıklama engelleme (Son 1 saat içinde alındıysa uyar)
+            const now = new Date();
+            if (appData.lastTaken) {
+                const last = new Date(appData.lastTaken);
+                const diffMins = (now - last) / 1000 / 60;
+                if (diffMins < 60) {
+                    if(!confirm("İlacı zaten çok yakın zamanda aldınız. Yine de kaydetmek istiyor musunuz?")) return;
+                }
+            }
+
+            // Veriyi güncelle
+            appData.stock -= 1;
+            appData.lastTaken = now.toISOString();
+            appData.history.unshift({ date: now.toISOString() }); // En başa ekle
+            
+            // Veriyi kaydet ve ekranı yenile
+            saveData();
+            updateUI();
+            
+            // Kullanıcıya geri bildirim
+            showAlert("Harika!", "İlaç saatiniz kaydedildi. Şifa olsun.");
+        }
+
+        function updateUI() {
+            // Stok Göstergesi
+            const stockEl = document.getElementById('stock-display');
+            stockEl.innerText = appData.stock;
+            
+            // Stok Rengi ve Uyarı
+            const warningEl = document.getElementById('stock-warning');
+            if (appData.stock <= 5) {
+                stockEl.classList.add('warning');
+                warningEl.style.display = 'block';
+            } else {
+                stockEl.classList.remove('warning');
+                warningEl.style.display = 'none';
+            }
+
+            // Son Kullanım Zamanı
+            const lastTakenEl = document.getElementById('last-taken-display');
+            if (appData.lastTaken) {
+                const date = new Date(appData.lastTaken);
+                const today = new Date();
+                
+                // Gün formatı
+                let dayStr = date.toLocaleDateString('tr-TR');
+                if(date.toDateString() === today.toDateString()) dayStr = "Bugün";
+                
+                lastTakenEl.innerText = `${dayStr} - ${date.toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'})}`;
+            } else {
+                lastTakenEl.innerText = "Henüz alınmadı";
+            }
+
+            // Geçmiş Listesi
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const listEl = document.getElementById('history-list');
+            listEl.innerHTML = "";
+            
+            appData.history.slice(0, 30).forEach(item => { // Son 30 kayıt
+                const date = new Date(item.date);
+                const li = document.createElement('li');
+                li.className = 'history-item';
+                li.innerHTML = `
+                    <span class="history-date">${date.toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+                    <span class="history-time">${date.toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'})}</span>
+                `;
+                listEl.appendChild(li);
+            });
+        }
+
+        // 3. AYARLAR VE YARDIMCI FONKSİYONLAR
+
+        function saveSettings() {
+            const newStock = parseInt(document.getElementById('setting-stock').value);
+            const newTime = document.getElementById('setting-time').value;
+
+            if (isNaN(newStock) || newStock < 0) {
+                showAlert("Hata", "Geçerli bir stok sayısı giriniz.");
+                return;
+            }
+
+            appData.stock = newStock;
+            appData.reminderTime = newTime;
+            saveData();
+            updateUI();
+            showAlert("Başarılı", "Ayarlar kaydedildi.");
+            showPage('home-page', document.querySelector('.nav-item')); // Ana sayfaya dön
+        }
+
+        function saveData() {
+            localStorage.setItem('anoroData', JSON.stringify(appData));
+        }
+
+        function resetApp() {
+            if(confirm("Tüm kayıtlar silinecek ve uygulama sıfırlanacak. Emin misiniz?")) {
+                localStorage.removeItem('anoroData');
+                location.reload();
+            }
+        }
+
+        // 4. SAYFA YÖNETİMİ (ROUTER)
+        function showPage(pageId, btnElement) {
+            // Tüm sayfaları gizle
+            document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+            // Seçilen sayfayı göster
+            document.getElementById(pageId).classList.add('active');
+
+            // Nav butonlarını güncelle
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            if(btnElement) btnElement.classList.add('active');
+            
+            // Sayfa başlığını güncelle (Opsiyonel)
+            const titles = {
+                'home-page': 'Anoro Takip',
+                'history-page': 'Kullanım Geçmişi',
+                'settings-page': 'Ayarlar'
+            };
+            document.getElementById('app-header').innerText = titles[pageId] || 'Anoro Takip';
+        }
+
+        // 5. BİLDİRİM VE MODAL İŞLEMLERİ
+        function showAlert(title, msg) {
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-msg').innerText = msg;
+            document.getElementById('alert-modal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('alert-modal').style.display = 'none';
+        }
+
+        function checkNotifications() {
+            if ("Notification" in window && Notification.permission !== "granted") {
+                Notification.requestPermission();
+            }
+        }
+        
+        // Basit bir local bildirim kontrolcüsü (Uygulama açıksa çalışır)
+        setInterval(() => {
+            const now = new Date();
+            const currentHM = now.toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'});
+            
+            // Eğer saat ayarlanan saatse ve bugün henüz alınmadıysa uyar
+            if(currentHM === appData.reminderTime) {
+                // Son alınan bugün değilse
+                const last = appData.lastTaken ? new Date(appData.lastTaken).toDateString() : "";
+                if(last !== now.toDateString()) {
+                   if(Notification.permission === "granted") {
+                       new Notification("İlaç Zamanı!", { body: "Anoro ilacınızı almayı unutmayın." });
+                   } else {
+                       showAlert("Hatırlatma", "İlaç saatiniz geldi!");
+                   }
+                }
+            }
+        }, 60000); // Dakikada bir kontrol et
+
+    </script>
+</body>
+</html>
